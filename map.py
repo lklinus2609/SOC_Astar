@@ -552,19 +552,7 @@ class Map:
         """Calculate heuristic distance between two points"""
         return math.sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
     
-    def has_adjacent_road(self, x, y):
-        """Check if a position has at least one adjacent road cell"""
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                if dx == 0 and dy == 0:
-                    continue  # Skip the cell itself
-                
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < self.size and 0 <= ny < self.size and self.grid[nx, ny] == 0:
-                    return True
-        
-        return False
-    
+
     def is_valid_position(self, x, y):
         """Check if position is a valid road cell"""
         return 0 <= x < self.size and 0 <= y < self.size and self.grid[x, y] == 0
