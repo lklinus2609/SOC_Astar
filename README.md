@@ -8,14 +8,14 @@ The simulation compares two pathfinding algorithms:
 1. **Standard A*** - Uses Euclidean distance as the cost function, finding the shortest path without considering energy consumption.
 2. **Battery-Aware A*** - Considers energy consumption due to elevation changes (inclines, declines) and terrain in its cost function.
 
-The main hypothesis is that as map size increases, the battery-aware algorithm will achieve longer operating ranges by choosing more energy-efficient paths rather than simply the shortest paths. This is particularly relevant for robots operating in environments with significant elevation changes, where battery management is crucial for extended operation.
+The main hypothesis is that as map size increases, the battery-aware algorithm will achieve longer operating ranges by choosing more energy-efficient paths rather than simply the shortest paths. This is particularly relevant for robots operating in environments with significant elevation changes, where battery management is crucial for extended operation. Example use case may include electric vehicles, agricultural autonomous vehicles, and more.
 
 ## Features
 
 - City-like map generation with variable road patterns, buildings, and elevation features
 - Realistic LiFePO4 battery model with:
   - Discharge efficiency varying with state of charge
-  - Regenerative braking on downhill segments
+  - Regenerative braking on downhill segments (70% efficeincy)
   - Physics-based energy consumption calculation
 - Comprehensive terrain representation with uphill, downhill, and flat segments
 - Detailed performance metrics and visualization
@@ -92,9 +92,57 @@ This simulation demonstrates concepts applicable to:
 - Path planning for drones and other battery-constrained mobile robots
 - Studying the tradeoffs between distance optimization and energy optimization
 
-## Requirements
+## Installation
 
+### Option 1: Standard Installation
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/soc-astar.git
+   cd soc-astar
+   ```
+
+2. Install required packages:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Option 2: Using Virtual Environment (Recommended)
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/soc-astar.git
+   cd soc-astar
+   ```
+
+2. Create a virtual environment:
+   ```bash
+   # Using venv (Python 3.3+)
+   python -m venv venv
+   
+   # Activate the virtual environment
+   # On Windows
+   venv\Scripts\activate
+   
+   # On macOS/Linux
+   source venv/bin/activate
+   ```
+
+3. Install required packages in the virtual environment:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. When you're done, you can deactivate the virtual environment:
+   ```bash
+   deactivate
+   ```
+
+### Requirements
+
+The major dependencies include:
 - Python 3.6+
-- NumPy
-- Matplotlib
-- Other dependencies in requirements.txt
+- NumPy: For numerical operations and array handling
+- Matplotlib: For visualization and chart generation
+- Other dependencies listed in requirements.txt
+
