@@ -3,10 +3,152 @@ import os
 from simulation import run_simulation
 from visualization import create_performance_charts, create_summary_chart
 
+def test_improved_heuristic():
+    """Run a simple test to verify the improved energy-based heuristic"""
+    from map import Map
+    from battery import LiFePO4Battery
+    from astar import standard_astar, battery_aware_astar
+    
+    print("\nTesting improved energy-based heuristic...")
+    print("====================================")
+    
+    # Create a small test map
+    map_size = 50
+    test_map = Map(map_size)
+    test_map.generate_city_map(elevation_variance=0.7)  # Use higher elevation variance for clear differences
+    
+    # Get start and goal positions
+    start = test_map.start_point
+    goal = test_map.end_point
+    
+    print(f"Map size: {map_size}x{map_size}")
+    print(f"Start: {start}, Goal: {goal}")
+    
+    # Run standard A*
+    print("Running standard A*...")
+    standard_path, standard_distance = standard_astar(test_map, start, goal)
+    
+    if standard_path:
+        print(f"Standard A* found path with {len(standard_path)} nodes and distance {standard_distance:.2f}")
+    else:
+        print("Standard A* found no path")
+    
+    # Test with different battery capacities to showcase the difference
+    for capacity in [200, 300, 400]:
+        print(f"\nTesting with battery capacity: {capacity} Wh")
+        
+        # Run battery-aware A* with improved heuristic
+        print("Running battery-aware A* with energy-based heuristic...")
+        battery = LiFePO4Battery(capacity)
+        battery_path, battery_energy, battery_remaining = battery_aware_astar(
+            test_map, start, goal, battery)
+        
+        if battery_path:
+            print(f"Battery-aware A* found path with {len(battery_path)} nodes and energy {battery_energy:.2f}")
+            print(f"Remaining battery charge: {battery_remaining*100:.2f}%")
+            
+            # Compare paths if both algorithms found a path
+            if standard_path:
+                # Run simulation on standard path to get energy consumption
+                from simulation import simulate_path
+                standard_battery = LiFePO4Battery(capacity)
+                standard_success, standard_remaining, _ = simulate_path(
+                    test_map, standard_path, standard_battery)
+                standard_energy = capacity - standard_remaining * capacity
+                
+                print("\nComparison:")
+                print(f"Standard A*: {len(standard_path)} nodes, distance: {standard_distance:.2f}, energy: {standard_energy:.2f}, remaining: {standard_remaining*100:.2f}%")
+                print(f"Battery A*: {len(battery_path)} nodes, energy: {battery_energy:.2f}, remaining: {battery_remaining*100:.2f}%")
+                
+                energy_diff = ((standard_energy - battery_energy) / standard_energy * 100) if standard_energy > 0 else 0
+                print(f"Energy savings with battery-aware A*: {energy_diff:.2f}%")
+                
+                # Visualize the comparison
+                output_dir = "results"
+                os.makedirs(output_dir, exist_ok=True)
+                test_map.visualize(start, goal, standard_path, battery_path, 
+                                 f"{output_dir}/test_comparison_c{capacity}.png")
+        else:
+            print("Battery-aware A* found no path with this battery capacity")
+    
+    print("\nTest completed. Check the 'results' directory for visualizations.")
+
+def test_physics_model():
+    """Test the physics-based model without terrain factors"""
+    print("\nTesting physics-based battery model (no terrain factors)...")
+    print("===================================================")
+    
+    # Create a small test map with higher elevation variance
+    map_size = 50
+    test_map = Map(map_size)
+    test_map.generate_city_map(elevation_variance=0.7)  # Higher variance for clearer results
+    
+    # Get start and goal positions
+    start = test_map.start_point
+    goal = test_map.end_point
+    
+    print(f"Map size: {map_size}x{map_size}")
+    print(f"Start: {start}, Goal: {goal}")
+    
+    # Run standard A*
+    print("Running standard A*...")
+    standard_path, standard_distance = standard_astar(test_map, start, goal)
+    
+    if standard_path:
+        print(f"Standard A* found path with {len(standard_path)} nodes and distance {standard_distance:.2f}")
+    else:
+        print("Standard A* found no path")
+    
+    # Test with battery capacity that should work for both algorithms
+    capacity = 350
+    print(f"\nTesting with battery capacity: {capacity} Wh")
+    
+    # Run battery-aware A* with improved heuristic
+    print("Running battery-aware A* with physics-based model...")
+    battery = LiFePO4Battery(capacity)
+    battery_path, battery_energy, battery_remaining = battery_aware_astar(
+        test_map, start, goal, battery)
+    
+    if battery_path:
+        print(f"Battery-aware A* found path with {len(battery_path)} nodes and energy {battery_energy:.2f}")
+        print(f"Remaining battery charge: {battery_remaining*100:.2f}%")
+        
+        # Compare paths if both algorithms found a path
+        if standard_path:
+            # Run simulation on standard path to get energy consumption
+            from simulation import simulate_path
+            standard_battery = LiFePO4Battery(capacity)
+            standard_success, standard_remaining, _ = simulate_path(
+                test_map, standard_path, standard_battery)
+            standard_energy = capacity - standard_remaining * capacity
+            
+            print("\nComparison:")
+            print(f"Standard A*: {len(standard_path)} nodes, distance: {standard_distance:.2f}, energy: {standard_energy:.2f}, remaining: {standard_remaining*100:.2f}%")
+            print(f"Battery A*: {len(battery_path)} nodes, energy: {battery_energy:.2f}, remaining: {battery_remaining*100:.2f}%")
+            
+            energy_diff = ((standard_energy - battery_energy) / standard_energy * 100) if standard_energy > 0 else 0
+            print(f"Energy savings with physics-based model: {energy_diff:.2f}%")
+            
+            # Visualize the comparison
+            output_dir = "results"
+            os.makedirs(output_dir, exist_ok=True)
+            test_map.visualize(start, goal, standard_path, battery_path, 
+                             f"{output_dir}/physics_model_comparison.png")
+    else:
+        print("Battery-aware A* found no path with this battery capacity")
+    
+    print("\nPhysics model test completed. Check the 'results' directory for visualizations.")
+
 def main():
     # Create output directory if it doesn't exist
     output_dir = "results"
     os.makedirs(output_dir, exist_ok=True)
+    
+    # Test the improved heuristic first
+    test_improved_heuristic()
+    
+    # Test the physics-based model (without terrain factors)
+    test_physics_model()
     
     # Set simulation parameters with fewer map sizes for faster execution
     map_sizes = [80, 120, 160] 

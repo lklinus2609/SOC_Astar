@@ -4,7 +4,7 @@ import random
 import math
 
 class Map:
-    def __init__(self, size, obstacle_density=0.2, elevation_variance=0.3):
+    def __init__(self, size, obstacle_density=0.2, elevation_variance=0.7):
         self.size = size
         # Grid representation: 0 = road (traversable), 1 = obstacle, 2 = empty space (non-traversable)
         self.grid = np.zeros((size, size), dtype=int)

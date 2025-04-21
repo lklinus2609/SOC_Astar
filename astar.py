@@ -61,8 +61,85 @@ def standard_astar(map_data, start, goal):
     # No path found
     return None, float('inf')
 
+def energy_heuristic(map_data, current, goal, battery_state):
+    """
+    Battery-aware energy heuristic function that estimates the minimum energy required
+    to reach the goal from the current position.
+    
+    This heuristic considers:
+    - Direct distance to goal
+    - Elevation difference between current position and goal
+    - Current battery state
+    
+    Returns an admissible (never overestimating) energy estimate.
+    """
+    # Calculate direct Euclidean distance to goal
+    direct_distance = euclidean_distance(current, goal)
+    
+    # Get current and goal elevations
+    current_elevation = map_data.elevation[current[0]][current[1]]
+    goal_elevation = map_data.elevation[goal[0]][goal[1]]
+    
+    # Calculate elevation difference
+    elevation_diff = goal_elevation - current_elevation
+    
+    # Base energy consumption estimate (flat terrain)
+    base_consumption = 1.0 * direct_distance
+    
+    # Get current state of charge and efficiency
+    current_soc = battery_state.get_state_of_charge()
+    current_efficiency = battery_state.get_efficiency_at_soc(current_soc)
+    
+    # Estimate energy for elevation change
+    # This is an optimistic estimate that considers:
+    # 1. Uphill segments will require additional energy
+    # 2. Downhill segments could potentially regenerate energy
+    if elevation_diff > 0:  # Going uphill overall
+        # Calculate optimistic slope angle
+        slope_rad = math.atan2(elevation_diff, direct_distance)
+        
+        # Calculate gravitational force component
+        gravitational_component = battery_state.robot_mass * 9.81 * math.sin(slope_rad)
+        
+        # Energy for elevation change (minimum required work against gravity)
+        elevation_energy = gravitational_component * direct_distance / current_efficiency
+        total_energy = base_consumption + max(0, elevation_energy)
+    else:  # Flat or downhill overall
+        # For downhill, we'll be optimistic and assume some energy recovery
+        # The actual path may not be able to utilize all potential recovery
+        # but the heuristic should be optimistic to remain admissible
+        slope_rad = math.atan2(elevation_diff, direct_distance)
+        gravitational_component = battery_state.robot_mass * 9.81 * math.sin(slope_rad)
+        
+        # Estimate potential energy recovery (with regeneration efficiency)
+        recovery = max(0, -gravitational_component * direct_distance * battery_state.regen_efficiency)
+        
+        # Net energy consumption with optimistic recovery
+        total_energy = max(0, base_consumption - recovery)
+    
+    # Ensure the heuristic never overestimates (must be admissible)
+    # The multiplier here is a safety factor; it can be tuned 
+    # but must be <= 1.0 to ensure admissibility
+    admissibility_factor = 0.9
+    
+    return total_energy * admissibility_factor
+
 def battery_aware_astar(map_data, start, goal, battery):
-    """Battery-aware A* algorithm"""
+    """
+    Battery-aware A* algorithm using a physics-based energy heuristic.
+    
+    This version uses energy as the consistent unit for both:
+    - g(n): Actual energy consumed from start to current node
+    - h(n): Estimated minimum energy required to reach the goal
+    
+    This creates a consistent, energy-optimizing pathfinding algorithm
+    that considers battery state and elevation changes using pure physics principles.
+    Energy calculations account for:
+    - Base movement energy consumption
+    - Work against gravity for uphill segments
+    - Potential energy recovery for downhill segments
+    - Battery efficiency based on state of charge
+    """
     open_set = PriorityQueue()
     open_set.put((0, 0, start))  # (f_score, counter, position)
     
@@ -78,8 +155,9 @@ def battery_aware_astar(map_data, start, goal, battery):
     # Battery state at each node
     battery_state = {start: battery.clone()}
     
-    # Estimated total cost from start to goal through current node
-    f_score = {start: euclidean_distance(start, goal)}
+    # Calculate initial f_score using the energy-based heuristic
+    initial_estimate = energy_heuristic(map_data, start, goal, battery_state[start])
+    f_score = {start: initial_estimate}
     
     # For tracking explored nodes
     open_set_hash = {start}
@@ -134,8 +212,10 @@ def battery_aware_astar(map_data, start, goal, battery):
                 new_battery.update_state(energy_consumption)
                 battery_state[neighbor] = new_battery
                 
-                # Update f_score with heuristic
-                f_score[neighbor] = tentative_g_score + euclidean_distance(neighbor, goal)
+                # Update f_score using the energy-based heuristic
+                # Both g_score and heuristic are now in the same units (energy)
+                energy_estimate = energy_heuristic(map_data, neighbor, goal, battery_state[neighbor])
+                f_score[neighbor] = tentative_g_score + energy_estimate
                 
                 if neighbor not in open_set_hash:
                     counter += 1

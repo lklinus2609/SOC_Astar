@@ -66,7 +66,7 @@ class LiFePO4Battery:
             current_elevation: Elevation at current position
             next_elevation: Elevation at next position
             distance: Distance between positions
-            terrain_type: Optional terrain type information (0=flat, 1=uphill, 2=downhill)
+            terrain_type: Optional terrain type information (kept for backward compatibility but not used)
             
         Returns:
             Energy consumption in watt-hours
@@ -85,22 +85,14 @@ class LiFePO4Battery:
         current_soc = self.get_state_of_charge()
         current_efficiency = self.get_efficiency_at_soc(current_soc)
         
-        # Apply terrain-specific factors (if terrain type is provided)
-        terrain_factor = 1.0
-        if terrain_type is not None:
-            if terrain_type == 1:  # Uphill
-                terrain_factor = 1.5
-            elif terrain_type == 2:  # Downhill
-                terrain_factor = 0.7
-        
         if elevation_diff > 0:  # Uphill
-            # Energy required to overcome gravitational force
-            work = gravitational_force * distance * terrain_factor
+            # Energy required to overcome gravitational force - purely physics-based
+            work = gravitational_force * distance
             # Add base consumption and apply efficiency
             total_consumption = (base_consumption + work) / current_efficiency
         else:  # Downhill or flat
-            # Potential energy recovery from downhill (if any)
-            recovery = max(0, -gravitational_force * distance * self.regen_efficiency * terrain_factor)
+            # Potential energy recovery from downhill (if any) - purely physics-based
+            recovery = max(0, -gravitational_force * distance * self.regen_efficiency)
             # Net consumption (with potential regeneration)
             total_consumption = max(0, base_consumption - recovery)
         
