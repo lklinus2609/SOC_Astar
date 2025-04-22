@@ -2,6 +2,9 @@ import time
 import os
 from simulation import run_simulation
 from visualization import create_performance_charts, create_summary_chart
+from map import Map
+from astar import standard_astar, battery_aware_astar
+from battery import LiFePO4Battery
 
 def test_improved_heuristic():
     """Run a simple test to verify the improved energy-based heuristic"""
@@ -151,7 +154,7 @@ def main():
     test_physics_model()
     
     # Set simulation parameters with fewer map sizes for faster execution
-    map_sizes = [80, 120, 160] 
+    map_sizes = [80, 120, 400] 
     trials_per_size = 1 
     battery_capacity = 500
     
